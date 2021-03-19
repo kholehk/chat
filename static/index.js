@@ -1,6 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 const { hostname } = window.location;
-const url = `ws://${hostname}:5000`;
+const url = `wss://${hostname}:5000`;
 
 function showMessage(message) {
   const messageElem = document.createElement('li');
