@@ -11,9 +11,15 @@ function showMessage(message) {
 function initSocket(_url) {
   const _ws = new WebSocket(_url);
 
+  const pingInterval = setInterval(() => {
+    if (_ws.readyState !== WebSocket.CLOSED) return;
+
+    initSocket(HOST);
+  }, 10000);
+
   _ws.onmessage = (event) => showMessage(event.data);
 
-  _ws.onclose = (event) => console.log(`Closed ${event.code}`);
+  _ws.onclose = () => clearInterval(pingInterval);
 
   return _ws;
 }
@@ -31,6 +37,7 @@ formPublish.addEventListener('submit', (event) => {
 
   elementsMessage.value = '';
 
-  ws = ws || initSocket(HOST);
+  if (ws.readyState !== WebSocket.OPEN) { ws = initSocket(HOST); }
+
   ws.send(outgoingMessage);
 });
