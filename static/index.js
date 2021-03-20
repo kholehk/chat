@@ -1,30 +1,33 @@
 /* eslint-disable no-underscore-dangle */
 const HOST = `${window.location.origin.replace(/^http/, 'ws')}/ws`;
+const messages = document.querySelector('#messages');
 
 function showMessage(message) {
   const messageElem = document.createElement('li');
 
   messageElem.innerHTML = message;
-  document.querySelector('#messages').append(messageElem);
+  messages.append(messageElem);
 }
 
 function initSocket(_url) {
+  messages.innerHTML = '';
+
   const _ws = new WebSocket(_url);
 
-  const pingInterval = setInterval(() => {
-    if (_ws.readyState !== WebSocket.CLOSED) return;
+  _ws.addEventListener('message', (event) => showMessage(event.data));
 
-    initSocket(HOST);
-  }, 10000);
-
-  _ws.onmessage = (event) => showMessage(event.data);
-
-  _ws.onclose = () => clearInterval(pingInterval);
+  _ws.addEventListener('close', (event) => console.log(`Closed: ${event.reason}`));
 
   return _ws;
 }
 
 let ws = initSocket(HOST);
+
+setInterval(() => {
+  if (ws.readyState !== WebSocket.CLOSED) return;
+
+  ws = initSocket(HOST);
+}, 10000);
 
 const formPublish = document.querySelector('#publish');
 formPublish.addEventListener('submit', (event) => {
@@ -33,11 +36,11 @@ formPublish.addEventListener('submit', (event) => {
   const elementsMessage = event.target.elements.message;
   const outgoingMessage = elementsMessage.value;
 
-  if (!outgoingMessage.trim()) return;
-
-  elementsMessage.value = '';
-
-  if (ws.readyState !== WebSocket.OPEN) { ws = initSocket(HOST); }
+  if (
+    !outgoingMessage.trim()
+    || ws.readyState !== WebSocket.OPEN
+  ) return;
 
   ws.send(outgoingMessage);
+  elementsMessage.value = '';
 });
