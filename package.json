@@ -20,10 +20,13 @@
     "nodemon": "^2.0.7"
   },
   "dependencies": {
+    "axios": "^0.21.1",
     "bufferutil": "^4.0.3",
     "express": "^4.17.1",
+    "serializr": "^2.0.5",
     "sqlite3": "^5.0.2",
     "utf-8-validate": "^5.0.4",
+    "uuid": "^3.4.0",
     "ws": "^7.4.4"
   }
 }
