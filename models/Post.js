@@ -1,6 +1,6 @@
 const { default: axios } = require('axios');
 const {
-  createModelSchema, primitive, reference, deserialize, serialize,
+  createModelSchema, primitive, reference,
 } = require('serializr');
 const { Author } = require('./Author');
 
