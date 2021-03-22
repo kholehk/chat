@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const { Server } = require('ws');
 
-const { onSocketConnect } = require('./chatWS');
+const { onSocketConnect } = require('./chat');
 
 const PORT = process.env.PORT || 3000;
 

@@ -16,8 +16,8 @@ const schema = {
 const logger = (err, msg) => console.log(err ? err.message : msg);
 
 const sqlCreate = `CREATE TABLE IF NOT EXISTS ${table}(
-  ${schema.id} INTEGER PRIMARY KEY,
-  ${schema.author} INTEGER FOREIGN KEY,
+  ${schema.id} INTEGER UNIQUE,
+  ${schema.author} INTEGER NOT NULL,
   ${schema.msg} TEXT NOT NULL
 )`;
 const sqlInsert = `INSERT INTO ${table} VALUES (?, ?, ?)`;
@@ -47,13 +47,21 @@ function onSocketConnect(ws) {
 
   ws.on('message', (data) => {
     db.serialize(() => {
-      console.log(`Input Post "${data}" in DB`);
-      const { author, message } = data;
+      console.log('Input Post in DB');
+      console.dir(data);
+      let author;
+      let message;
+
+      try {
+        author = JSON.parse(data)[schema.author];
+        message = JSON.parse(data)[schema.msg];
+      } catch (e) { console.log(`Input Data incorrect:${e.message}`); return; }
+
       db.run(sqlCreate, (err) => logger(err, `Table: "${table}" created`))
         .run(sqlInsert, [Date.now(), author, message]);
       deserialize(
         Post,
-        { author, message },
+        { [schema.author]: author, [schema.msg]: message },
         (err, result) => {
           if (err) return;
           clients.forEach((client) => client.send(JSON.stringify(serialize(result))));
