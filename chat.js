@@ -47,15 +47,14 @@ function onSocketConnect(ws) {
 
   ws.on('message', (data) => {
     db.serialize(() => {
-      console.log('Input Post in DB');
-      console.dir(data);
+      console.log(`Input Post in DB: ${data}`);
       let author;
       let message;
 
       try {
         author = JSON.parse(data)[schema.author];
         message = JSON.parse(data)[schema.msg];
-      } catch (e) { console.log(`Input Data incorrect:${e.message}`); return; }
+      } catch (e) { console.log(`Input Data incorrect: ${e.message}`); return; }
 
       db.run(sqlCreate, (err) => logger(err, `Table: "${table}" created`))
         .run(sqlInsert, [Date.now(), author, message]);
