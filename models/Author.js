@@ -1,7 +1,7 @@
 /* eslint-disable max-classes-per-file */
 const { default: axios } = require('axios');
 const {
-  createModelSchema, primitive, identifier, reference, deserialize,
+  createModelSchema, primitive, identifier,
 } = require('serializr');
 
 const authorsURL = 'https://rickandmortyapi.com/api/character/';

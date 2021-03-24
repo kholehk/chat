@@ -1,7 +1,5 @@
 const { Database, verbose } = require('sqlite3');
 const path = require('path');
-const { deserialize, serialize } = require('serializr');
-const { Post } = require('./models/Post');
 const { Author } = require('./models/Author');
 
 verbose();
@@ -23,23 +21,27 @@ const schemaPosts = {
   msg: 'message',
 };
 
-const sqlCreateAuthors = `CREATE TABLE IF NOT EXISTS ${schemaAuthors.table} (
-  ${schemaAuthors.id} INTEGER PRIMARY KEY,
-  ${schemaAuthors.name} TEXT NOT NULL
+const sqlCreateAuthors = `CREATE TABLE IF NOT EXISTS ${schemaAuthors.table} (\
+  ${schemaAuthors.id} INTEGER PRIMARY KEY,\
+  ${schemaAuthors.name} TEXT NOT NULL\
 )`;
 const sqlInsertAuthor = `INSERT INTO ${schemaAuthors.table} VALUES (?, ?)`;
 
-const sqlCreatePosts = `CREATE TABLE IF NOT EXISTS ${schemaPosts.table} (
-  ${schemaPosts.id} INTEGER PRIMARY KEY,
-  ${schemaPosts.author} INTEGER NOT NULL,
-  ${schemaPosts.msg} TEXT NOT NULL,
-  FOREIGN KEY (${schemaPosts.author})
-      REFERENCES ${schemaAuthors.table} (${schemaAuthors.id})
-         ON DELETE CASCADE
-         ON UPDATE NO ACTION
+const sqlCreatePosts = `CREATE TABLE IF NOT EXISTS ${schemaPosts.table} (\
+  ${schemaPosts.id} INTEGER PRIMARY KEY,\
+  ${schemaPosts.author} INTEGER NOT NULL,\
+  ${schemaPosts.msg} TEXT NOT NULL,\
+  FOREIGN KEY (${schemaPosts.author})\
+      REFERENCES ${schemaAuthors.table} (${schemaAuthors.id})\
+         ON DELETE CASCADE\
+         ON UPDATE NO ACTION\
 )`;
 const sqlInsertPost = `INSERT INTO ${schemaPosts.table} VALUES (?, ?, ?)`;
-const sqlAllPosts = `SELECT * FROM ${schemaPosts.table} 
+const sqlAllPosts = `SELECT\
+    ${schemaPosts.id}, ${schemaPosts.table}.${schemaPosts.author}, ${schemaAuthors.name}, ${schemaPosts.msg}\
+  FROM ${schemaPosts.table}\
+  LEFT JOIN ${schemaAuthors.table}\
+    ON ${schemaPosts.table}.${schemaPosts.author} = ${schemaAuthors.table}.${schemaAuthors.id}\
   ORDER BY ${schemaPosts.id} ASC`;
 
 const clients = new Set();
@@ -54,7 +56,9 @@ function onSocketConnect(ws) {
     .each(sqlAllPosts, (err, row) => {
       if (err) throw err;
       console.dir(row);
-      ws.send(JSON.stringify(row));
+      ws.send(JSON.stringify(
+        { [schemaPosts.author]: row[schemaAuthors.name], [schemaPosts.msg]: row[schemaPosts.msg] },
+      ));
     }));
 
   let payload = { type: '', author: 0, message: '' };
@@ -79,16 +83,14 @@ function onSocketConnect(ws) {
         case 'chat':
           db.serialize(() => {
             db.run(sqlCreatePosts, (err) => logger(err, `Table ${schemaPosts.table} created`))
-              .run(sqlInsertPost, [Date.now(), author, message]);
+              .run(sqlInsertPost, [Date.now(), author.id, message]);
 
-            deserialize(
-              Post,
-              { [schemaPosts.author]: author, [schemaPosts.msg]: message },
-              (err, result) => {
-                if (err) return;
-                clients.forEach((client) => client.send(JSON.stringify(serialize(result))));
-              },
-            );
+            console.log({ author, message });
+            clients.forEach((client) => client.send(
+              JSON.stringify({
+                [schemaPosts.author]: author[schemaAuthors.name], [schemaPosts.msg]: message,
+              }),
+            ));
           });
           break;
         default:

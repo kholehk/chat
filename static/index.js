@@ -57,7 +57,7 @@ if (!currentAuthor) {
 
   let wsChat = initSocket(WS_HOST);
 
-  setInterval(() => {
+  const interval = setInterval(() => {
     if (wsChat.readyState !== WebSocket.CLOSED) return;
 
     wsChat = initSocket(WS_HOST);
