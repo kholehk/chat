@@ -1,30 +1,14 @@
 /* eslint-disable no-param-reassign */
-/* eslint-disable no-return-assign */
-/* eslint-disable no-underscore-dangle */
-const HOST = `${window.location.origin.replace(/^http/, 'ws')}/ws`;
+const authorsAmount = 671; // amount character from https://rickandmortyapi.com/api/character
+
+function randomAuthor(amount) {
+  return Math.floor(Math.random() * amount) + 1;
+}
+
 const messages = document.querySelector('#messages');
-const authorsURL = 'https://rickandmortyapi.com/api/character/';
-const authorsAmount = 671;
-
-function randomAuthor() {
-  return Math.floor(Math.random() * authorsAmount) + 1;
-}
-
-async function login(id) {
-  let author = { id };
-
-  try {
-    const response = await fetch(authorsURL + id);
-    const { name } = await response.json();
-
-    author = { ...author, name };
-  } catch { author = { id: 0, name: 'Guest' }; }
-
-  return author;
-}
 
 function showMessage(msg) {
-  let post = { author: 0, message: '' };
+  let post = { author: 'Guest', message: '' };
 
   try {
     post = { ...post, ...JSON.parse(msg) };
@@ -41,29 +25,43 @@ function showMessage(msg) {
   messages.append(messageElement);
 }
 
+const nameParams = 'author';
+
+const currentURL = new URL(window.location.href);
+const currentAuthor = currentURL.searchParams.get(nameParams);
+
+const author = currentAuthor || randomAuthor(authorsAmount);
+console.log(`Author: ${author}`);
+
 function initSocket(_url) {
   messages.innerHTML = '';
 
-  const _ws = new WebSocket(_url);
+  const ws = new WebSocket(_url);
 
-  _ws.addEventListener('message', async (event) => showMessage(event.data));
+  ws.addEventListener('open', () => ws.send(JSON.stringify({ type: 'login', author })));
 
-  _ws.addEventListener('close', (event) => console.log(`Closed: ${event.reason}`));
+  ws.addEventListener('message', async (event) => showMessage(event.data));
 
-  return _ws;
+  ws.addEventListener('close', (event) => console.log(`Closed: ${event.reason}`));
+
+  return ws;
 }
 
-let ws = initSocket(HOST);
+const chatURL = new URL('/chat', origin);
+chatURL.searchParams.append(nameParams, `${author}`);
 
-setInterval(() => {
-  if (ws.readyState !== WebSocket.CLOSED) return;
+if (!currentAuthor) {
+  window.location.assign(chatURL);
+} else {
+  const WS_HOST = `${origin.replace(/^http/, 'ws')}/chat`;
 
-  ws = initSocket(HOST);
-}, 10000);
+  let wsChat = initSocket(WS_HOST);
 
-async function main() {
-  const author = await login(randomAuthor());
-  console.log(`Author: ${author.name}`);
+  setInterval(() => {
+    if (wsChat.readyState !== WebSocket.CLOSED) return;
+
+    wsChat = initSocket(WS_HOST);
+  }, 10000);
 
   const formPublish = document.querySelector('#publish');
 
@@ -71,24 +69,20 @@ async function main() {
 
   formPublish.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (ws.readyState !== WebSocket.OPEN) return;
+
+    if (wsChat.readyState !== WebSocket.OPEN) return;
 
     const filteredElements = [...event.target.elements]
       .filter((element) => (element.name && element.value.trim()));
 
     if (!filteredElements || !filteredElements.length) return;
 
-    const { id } = author;
     const post = filteredElements
-      .reduce((acc, { name, value }) => ({ ...acc, [name]: value }), { author: id });
+      .reduce((acc, { name, value }) => ({ ...acc, [name]: value }), { type: 'chat' });
 
-    console.dir(post);
-
-    ws.send(JSON.stringify(post));
+    wsChat.send(JSON.stringify(post));
 
     filteredElements
-      .forEach((element) => element.value = '');
+      .forEach((element) => { element.value = ''; });
   });
 }
-
-main();

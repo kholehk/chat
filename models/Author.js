@@ -1,17 +1,36 @@
-const { createModelSchema, primitive, identifier } = require('serializr');
+/* eslint-disable max-classes-per-file */
+const { default: axios } = require('axios');
+const {
+  createModelSchema, primitive, identifier, reference, deserialize,
+} = require('serializr');
+
+const authorsURL = 'https://rickandmortyapi.com/api/character/';
+const guest = 'Guest';
 
 class Author {
-  constructor(id, name = 'Guest') {
+  constructor(id = 0) {
     this.id = id;
-    this.name = name;
+    this.name = null;
   }
 
-  static initModelSchema() {
-    createModelSchema(Author, {
-      id: primitive(),
-      name: identifier(),
-    });
+  async initFromAPI() {
+    try {
+      const { data } = await axios(authorsURL + this.id);
+      this.name = data.name;
+    } catch (e) {
+      console.log(e.message);
+      this.name = guest;
+    }
+  }
+
+  async initFromDB() {
+    this.name = 'Guest';
   }
 }
+
+createModelSchema(Author, {
+  id: identifier(),
+  name: primitive(),
+});
 
 module.exports = { Author };
